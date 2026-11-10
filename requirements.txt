@@ -1,0 +1,19 @@
+# Requirements for IU X-Ray Baseline CE Evaluation
+# PyTorch is required but should be installed according to the host system
+# (e.g., CPU vs CUDA version) using https://pytorch.org/get-started/locally/
+# Below are the remaining cross-platform dependencies.
+
+transformers>=4.40.0
+accelerate>=0.29.0
+pillow>=10.2.0
+numpy>=1.26.0
+pandas>=2.2.0
+scikit-learn>=1.4.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+pyyaml>=6.0.0
+tqdm>=4.66.0
+psutil>=5.9.0
+
+# Optional depending on qwen model versions
+qwen-vl-utils>=0.0.1

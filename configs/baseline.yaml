@@ -1,0 +1,162 @@
+# ============================================================
+# Baseline Clinical Efficacy Evaluation — Configuration
+# IU X-Ray Chest Report Generation
+# ============================================================
+
+# ------------------------------------------------------------------
+# Dataset
+# ------------------------------------------------------------------
+dataset:
+  # Root directory of the IU-Xray dataset
+  root: "IU-Xray"
+
+  # JSONL splits (relative to root)
+  splits:
+    train: "train.jsonl"
+    val:   "val.jsonl"
+    test:  "test.jsonl"
+
+  # The prefix used inside the JSONL image paths (e.g. /iu_xray/image/...)
+  # will be stripped and replaced by image_root_relative below.
+  # Example: "/iu_xray/image/CXR123/0.png" -> image_root + "/CXR123/0.png"
+  jsonl_image_prefix: "/iu_xray/image/"
+
+  # Path to the actual image folder, relative to dataset root
+  # Full path: <root>/<image_root_relative>/<CXR_folder>/<0.png>
+  image_root_relative: "image/mnt/bn/haiyang-dataset-lq/medical/home/yisiyang/ysy/medical_dataset/iu_xray/iu_xray/images"
+
+  # Primary evaluation split
+  eval_split: "test"
+
+  # Maximum samples for smoke test (set to null to run full eval)
+  smoke_test_n: 8
+
+# ------------------------------------------------------------------
+# Prompt
+# ------------------------------------------------------------------
+prompt:
+  # Core clinical instruction sent to every model
+  text: >
+    Review the provided chest X-ray image(s) and generate a concise radiology
+    report describing clinically relevant abnormalities and important negative
+    findings. Do not invent findings that are not supported by the images.
+
+# ------------------------------------------------------------------
+# Generation parameters
+# ------------------------------------------------------------------
+generation:
+  max_new_tokens: 256
+  temperature: 0.0       # greedy decoding for reproducibility
+  do_sample: false
+  batch_size: 1
+
+# ------------------------------------------------------------------
+# Models
+# ------------------------------------------------------------------
+models:
+  - name: "moondream2"
+    checkpoint: "vikhyatk/moondream2"
+    revision: "2024-05-20"
+    dtype: "float16"
+    enabled: false
+    notes: "Already evaluated. Disable to skip."
+
+  - name: "qwen2-vl"
+    checkpoint: "Qwen/Qwen2-VL-2B-Instruct"
+    dtype: "float16"
+    enabled: false
+    notes: "Already evaluated. Disable to skip."
+
+  - name: "llava-med"
+    checkpoint: "microsoft/llava-med-v1.5-mistral-7b"
+    dtype: "float16"
+    enabled: false
+    notes: "Broken HF repo (missing preprocessor_config.json). Cannot load."
+
+  - name: "paligemma2"
+    checkpoint: "google/paligemma-3b-pt-224"
+    dtype: "float16"
+    enabled: false
+    notes: "Gated repo - requires HF login and model access approval at huggingface.co/google/paligemma-3b-pt-224"
+
+  - name: "florence2"
+    checkpoint: "microsoft/Florence-2-large"
+    dtype: "float16"
+    enabled: false
+    notes: "Already evaluated. Disable to skip."
+
+  - name: "internvl2"
+    checkpoint: "OpenGVLab/InternVL2-1B"
+    dtype: "float16"
+    enabled: false
+    notes: "Already evaluated (1B). Disable to skip."
+
+  - name: "florence2-base"
+    checkpoint: "microsoft/Florence-2-base"
+    dtype: "float16"
+    enabled: true
+    notes: "Florence-2 base (0.23B) — lighter variant for comparison."
+
+  - name: "internvl2-2b"
+    checkpoint: "OpenGVLab/InternVL2-2B"
+    dtype: "float16"
+    enabled: true
+    notes: "InternVL2 2B — stronger than 1B, multi-image, ~4 GB VRAM."
+
+# ------------------------------------------------------------------
+# Clinical Labeler
+# ------------------------------------------------------------------
+labeler:
+  # Supported backends: "chexbert" | "chexpert_regex"
+  # chexbert  : uses the CheXbert transformer model (recommended, requires downloading model)
+  # chexpert_regex : rule-based NLP labeler that does not need a GPU model
+  backend: "chexpert_regex"
+
+  # CheXbert model path (only used if backend == "chexbert")
+  chexbert_model_path: null   # e.g. "path/to/chexbert.pth"
+
+  # How to handle uncertain/possible labels from the labeler
+  # Options: "positive" | "negative" | "ignore"
+  uncertainty_policy: "negative"
+
+  # Label set (must match the labeler's actual output)
+  # These are the 14 CheXpert/CheXbert labels
+  label_set:
+    - "No Finding"
+    - "Enlarged Cardiomediastinum"
+    - "Cardiomegaly"
+    - "Lung Lesion"
+    - "Airspace Opacity"
+    - "Edema"
+    - "Consolidation"
+    - "Pneumonia"
+    - "Atelectasis"
+    - "Pneumothorax"
+    - "Pleural Effusion"
+    - "Pleural Other"
+    - "Fracture"
+    - "Support Devices"
+
+# ------------------------------------------------------------------
+# Output
+# ------------------------------------------------------------------
+output:
+  # Base experiments directory (relative to project root)
+  experiments_dir: "experiments"
+
+  # Sub-directory name for this run (will be timestamped automatically)
+  run_name: "baseline"
+
+  # Save formats: "jsonl" | "parquet"
+  format: "jsonl"
+
+# ------------------------------------------------------------------
+# Reproducibility
+# ------------------------------------------------------------------
+seed: 42
+
+# ------------------------------------------------------------------
+# Logging
+# ------------------------------------------------------------------
+logging:
+  level: "INFO"

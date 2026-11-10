@@ -1,0 +1,35 @@
+{
+    "experiment": "M3_B1_anatomy_disease_attention",
+    "backbone": "efficientnet_b1",
+    "checkpoint_path": "checkpoints/best_classifier_efficientnet_b1.pth",
+    "freeze_backbone": true,
+    "num_classes": 14,
+
+    "use_multiscale": true,
+    "multiscale_dilations": [1, 2, 3],
+    "use_channel_attention": true,
+    "channel_reduction": 16,
+    "use_spatial_attention": true,
+    "spatial_kernel": 7,
+
+    "use_anatomy": false,
+    "anatomy_mid_channels": 32,
+    "use_boundary": false,
+
+    "use_disease_attention": true,
+    "use_anatomy_conditioning": false,
+    "use_global_local": false,
+    "disease_att_hidden": 128,
+
+    "lambda_anatomy": 0.0,
+    "lambda_diversity": 0.0,
+    "asl_gamma_neg": 4,
+    "asl_gamma_pos": 0,
+    "asl_clip": 0.05,
+
+    "batch_size": 32,
+    "epochs": 20,
+    "lr": 1e-4,
+    "weight_decay": 1e-4,
+    "seed": 42
+}

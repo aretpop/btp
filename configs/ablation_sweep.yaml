@@ -1,0 +1,48 @@
+ablations:
+  - name: baseline_old
+    overrides:
+      sampler.mode: random
+      loss.pos_weight_mode: cohort_sqrt
+      model.fuse_block5: false
+      model.attn_pool_mode: sum
+      training.stage_b_unfreeze_mode: last3
+
+  - name: sampled_stream_posweight
+    overrides:
+      loss.pos_weight_mode: sampled_stream
+      model.fuse_block5: false
+      model.attn_pool_mode: sum
+
+  - name: normalized_pooling
+    overrides:
+      loss.pos_weight_mode: sampled_stream
+      model.fuse_block5: false
+      model.attn_pool_mode: norm_avg
+
+  - name: fuse_block5
+    overrides:
+      loss.pos_weight_mode: sampled_stream
+      model.fuse_block5: true
+      model.attn_pool_mode: norm_avg
+
+  - name: unfreeze_features5plus
+    overrides:
+      loss.pos_weight_mode: sampled_stream
+      model.fuse_block5: true
+      model.attn_pool_mode: norm_avg
+      training.stage_b_unfreeze_mode: last3
+
+  - name: calibration_thresholds
+    overrides:
+      loss.pos_weight_mode: sampled_stream
+      model.fuse_block5: true
+      model.attn_pool_mode: norm_avg
+      eval.threshold_tuning: true
+      eval.calibration: true
+
+  - name: resolution_320
+    overrides:
+      model.input_resolution: 320
+      loss.pos_weight_mode: sampled_stream
+      model.fuse_block5: true
+      model.attn_pool_mode: norm_avg

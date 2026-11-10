@@ -1,0 +1,149 @@
+# ============================================================
+# CheXpert+ Clinical Evaluation & Training — Configuration
+# Streaming from Redivis (no full dataset download required)
+# ============================================================
+
+# ------------------------------------------------------------------
+# Dataset
+# ------------------------------------------------------------------
+dataset:
+  name: "chexpert_plus"
+
+  # Redivis dataset reference
+  redivis:
+    user: "aimi"
+    dataset: "chexpert_plus:5yyj:v1_0"
+    tables:
+      train:         "PNG_train"          # 223,228 images
+      valid:         "PNG_valid:41v9"     # 234 images
+      train_index:   "data/chexpert_subset/train_index.csv"
+      valid_index:   "data/chexpert_subset/valid_index.csv"
+
+  # Streaming cache (rolling LRU — no need to download 720 GB)
+  cache:
+    dir:         "data/chexpert_cache"
+    size_gb:     5.0          # keep ~2000 images on disk at a time
+  
+  # Image filtering
+  frontal_only: true          # use frontal (AP/PA) views only
+  
+  # How to handle uncertain labels (-1 in CheXpert)
+  # Options: "zeros" | "ones" | "ignore"
+  uncertainty_policy: "zeros"
+
+  # Subset for quick experiments (null = full dataset)
+  # Set to e.g. 5000 for a fast smoke-test training run
+  train_subset_n: 5000
+  valid_subset_n: null        # use all 202 frontal valid images
+
+  # Primary evaluation split
+  eval_split: "valid"
+
+# ------------------------------------------------------------------
+# Stratified Sampling
+# ------------------------------------------------------------------
+sampler:
+  # Round-robin across 14 disease buckets so rare conditions
+  # (e.g. Pneumonia ~0.5%) get equal representation per batch
+  enabled: true
+  num_samples_per_epoch: 5000   # samples drawn per epoch
+  seed: 42
+
+# ------------------------------------------------------------------
+# Label set (CheXpert 14-class)
+# ------------------------------------------------------------------
+labeler:
+  label_set:
+    - "No Finding"
+    - "Enlarged Cardiomediastinum"
+    - "Cardiomegaly"
+    - "Lung Opacity"
+    - "Lung Lesion"
+    - "Edema"
+    - "Consolidation"
+    - "Pneumonia"
+    - "Atelectasis"
+    - "Pneumothorax"
+    - "Pleural Effusion"
+    - "Pleural Other"
+    - "Fracture"
+    - "Support Devices"
+
+  # Ground truth source for reference reports (VLM eval)
+  report_field: "section_impression"   # or "section_findings"
+
+# ------------------------------------------------------------------
+# Training
+# ------------------------------------------------------------------
+training:
+  # Vision backbone to use as feature extractor
+  # Options: "densenet121" | "resnet50" | "vit_b_16"
+  backbone: "densenet121"
+  pretrained: true            # start from ImageNet weights
+  freeze_backbone: false      # fine-tune entire backbone
+  
+  # Classification head
+  dropout: 0.2
+  
+  # Optimization
+  optimizer: "adamw"
+  lr: 1.0e-4
+  weight_decay: 1.0e-4
+  scheduler: "cosine"         # "cosine" | "step" | "none"
+  
+  # Training loop
+  epochs: 10
+  batch_size: 16
+  num_workers: 0              # 0 = single process (safe on Windows)
+  
+  # Loss
+  loss: "bce_weighted"        # uses pos_weight from label distribution
+
+  # Checkpointing
+  checkpoint_dir: "checkpoints/chexpert"
+  save_every_n_epochs: 2
+  
+  # Mixed precision (set false if no GPU)
+  amp: true
+
+# ------------------------------------------------------------------
+# Prompt (for VLM report generation evaluation)
+# ------------------------------------------------------------------
+prompt:
+  text: >
+    Review the provided chest X-ray image and generate a concise radiology
+    report describing clinically relevant abnormalities and important negative
+    findings. Do not invent findings that are not supported by the image.
+
+# ------------------------------------------------------------------
+# Models (for VLM evaluation — same as baseline)
+# ------------------------------------------------------------------
+models:
+  - name: "florence2-base"
+    checkpoint: "microsoft/Florence-2-base"
+    dtype: "float16"
+    enabled: false
+
+  - name: "internvl2-2b"
+    checkpoint: "OpenGVLab/InternVL2-2B"
+    dtype: "float16"
+    enabled: false
+
+# ------------------------------------------------------------------
+# Output
+# ------------------------------------------------------------------
+output:
+  experiments_dir: "experiments"
+  run_name:        "chexpert_baseline"
+  format:          "jsonl"
+
+# ------------------------------------------------------------------
+# Reproducibility
+# ------------------------------------------------------------------
+seed: 42
+
+# ------------------------------------------------------------------
+# Logging
+# ------------------------------------------------------------------
+logging:
+  level: "INFO"

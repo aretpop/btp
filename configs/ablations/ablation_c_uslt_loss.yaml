@@ -1,0 +1,67 @@
+# Ablation c: USLT loss only (+ double-correction fix, linear14 head)
+# PURPOSE: isolate USLT loss vs plain BCE.
+recipe: uslfa_v3
+
+backbone:
+  name: efficientnet_b1
+  pretrained: true
+  mid_tap: 5
+  deep_tap: 8
+
+input_resolution: 224
+feat_dim: 256
+num_classes: 14
+fuse_block5: true
+attn_pool_mode: norm_avg
+att_norm: spatial_softmax
+attn_temperature: 0.5
+attn_regularizer_weight: 0.05
+focus_normalize: true
+diversity_reg_weight: 0.05
+div_mode: cooc_masked
+
+head:
+  type: linear14    # <-- keep linear14, only add USLT
+
+data:
+  index_csv: data/chexpert_subset/chexpert_materialized_index.csv
+  cache_dir: data/chexpert_cache
+  val_frac: 0.10
+  test_frac: 0.10
+  split_seed: 42
+  uncertain_policy: u_soft
+  uncertain_target: 0.5
+
+sampler:
+  mode: random
+  batch_size: 32
+  batches_per_epoch: 800
+  seed: 42
+
+loss:
+  type: uslt
+  beta: 0.999
+  alpha_mode: effective_num
+  lambda_u: 0.5
+  eps: 0.1
+
+training:
+  stage_a_epochs: 5
+  stage_a_lr: 1.0e-3
+  stage_a_weight_decay: 1.0e-2
+  stage_a_patience: 3
+  stage_b_epochs: 20
+  stage_b_backbone_lr: 1.0e-5
+  stage_b_head_lr: 1.0e-4
+  stage_b_weight_decay: 1.0e-2
+  stage_b_patience: 5
+  stage_b_unfreeze_mode: last4
+  warmup_epochs: 1
+  use_amp: true
+  seed: 42
+  early_stop_metric: mean_auprc
+
+experiment:
+  name: ablation_c_uslt_only
+  notes: "USLT loss + random sampler + linear14 head; isolates loss contribution"
+

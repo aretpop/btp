@@ -1,0 +1,99 @@
+# ── Model ───────────────────────────────────────────────────────────────────
+model:
+  backbone: efficientnet_b1
+  input_resolution: 224          # 224 or 320
+  feat_dim: 256
+  num_classes: 14
+  fuse_block5: true              # FPN-style block5 fusion
+  attn_pool_mode: norm_avg       # sum | norm_avg | softmax
+  disable_dilation3: false       # ablate dilation-3 MSFB branch
+  att_norm: spatial_softmax      # sigmoid | spatial_softmax | temp_sigmoid
+  attn_temperature: 0.5          # temperature for spatial softmax sharpening
+  attn_regularizer_weight: 0.05  # entropy/L1 penalty on attention maps
+  diversity_reg_weight: 0.05     # Gram matrix cross-disease orthogonality penalty
+  arch_version: b1v2             # checkpoint versioning
+
+# ── Data ────────────────────────────────────────────────────────────────────
+data:
+  index_csv: data/chexpert_subset/chexpert_materialized_index.csv
+  cache_dir: data/chexpert_cache
+  val_frac: 0.10
+  test_frac: 0.10
+  split_seed: 42
+  uncertain_policy: u_zeros      # u_zeros | u_ones | ignore | smooth
+
+# ── Sampler ─────────────────────────────────────────────────────────────────
+sampler:
+  mode: tiered                   # tiered | random
+  batch_size: 32
+  pool_counts: [14, 12, 6]       # rare, common, normal per batch
+  batches_per_epoch: 800
+  intra_pool_mode: sqrt_freq     # sqrt_freq | uniform | random
+  pool_thresholds: [0.05, 0.25]  # prevalence thresholds for pool assignment
+  seed: 42
+
+# ── Loss ────────────────────────────────────────────────────────────────────
+loss:
+  pos_weight_mode: sampled_stream  # cohort_sqrt | sampled_stream | sampled_stream_sqrt | none
+  pos_weight_n_batches: 200        # batches to sample for empirical pos rates
+  # Hardcoded fallback for cohort_sqrt (from B0 training):
+  cohort_sqrt_weights: [2.24, 3.63, 2.06, 1.02, 4.22, 1.80, 3.58, 8.26, 2.28, 2.72, 1.28, 6.51, 4.24, 0.95]
+
+# ── Training ────────────────────────────────────────────────────────────────
+training:
+  # Stage A (frozen backbone)
+  stage_a_epochs: 5
+  stage_a_lr: 1.0e-3
+  stage_a_weight_decay: 1.0e-2
+  stage_a_patience: 3
+
+  # Stage B (partial unfreeze)
+  stage_b_epochs: 20
+  stage_b_backbone_lr: 1.0e-5
+  stage_b_head_lr: 1.0e-4
+  stage_b_weight_decay: 1.0e-2
+  stage_b_patience: 5
+  stage_b_unfreeze_mode: last3   # last3 | full
+
+  # Warmup
+  warmup_epochs: 1               # linear warmup epochs (0 = no warmup)
+
+  # Regularization
+  label_smoothing: 0.0
+
+  # Early stopping metric
+  early_stop_metric: mean_auprc  # mean_auprc | mean_auroc | loss
+
+  # AMP
+  use_amp: true
+
+  # EMA
+  use_ema: false
+  ema_decay: 0.999
+
+  num_workers: 4
+  pin_memory: true
+  seed: 42
+
+# ── Evaluation ──────────────────────────────────────────────────────────────
+eval:
+  val_batch_size: 64
+  threshold_default: 0.5
+  threshold_tuning: true         # tune per-class threshold on val set
+  threshold_target_recall: null  # if set, find threshold for this recall
+  calibration: true              # temperature scaling on val set
+  compute_ece: true
+
+# ── Logging ─────────────────────────────────────────────────────────────────
+logging:
+  mlflow_experiment: chexpert_b1_v2
+  checkpoint_dir: checkpoints/chexpert_b1_v2
+  results_dir: outputs/chexpert_b1_v2
+  log_sampler_ratios: true
+  log_pos_rates: true
+  save_attention_samples: true   # save overlay visualizations
+
+# ── Experiment name ─────────────────────────────────────────────────────────
+experiment:
+  name: chexpert_b1_v2_baseline
+  notes: ""

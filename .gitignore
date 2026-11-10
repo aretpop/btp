@@ -1,0 +1,62 @@
+# Data, datasets, and caches
+data/
+data/**
+IU-Xray/
+IU-Xray/**
+*.csv
+*.tsv
+*.h5
+*.hdf5
+*.jsonl
+
+# Root data / json files
+findings_fixed.json
+impression_fixed.json
+report_fixed.json
+section_findings.json
+section_impression.json
+import_trace.txt
+try.c
+test_gradcam.py
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+mlflow.db
+mlflow/
+mlruns/
+wandb/
+
+# Checkpoints and weights
+checkpoints/
+checkpoints/**
+*.pth
+*.pt
+*.ckpt
+*.bin
+
+# Training outputs, evaluations, figures, logs
+outputs/
+outputs/**
+*.log
+*.png
+*.jpg
+*.jpeg
+*.pdf
+
+# Python & Environment caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+*.pkl
