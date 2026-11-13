@@ -1,13 +1,15 @@
 # Data, datasets, and caches
-data/
-data/**
-IU-Xray/
-IU-Xray/**
+/data/
+/IU-Xray/
 *.csv
 *.tsv
 *.h5
 *.hdf5
 *.jsonl
+
+# Unignore source data modules
+!src/data/
+!src/data/**
 
 # Root data / json files
 findings_fixed.json
