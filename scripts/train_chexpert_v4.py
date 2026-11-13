@@ -444,11 +444,31 @@ def main():
         opt_b = torch.optim.AdamW(param_groups)
         sched_b = torch.optim.lr_scheduler.CosineAnnealingLR(opt_b, T_max=epochs_b, eta_min=min_lr_b)
 
+        start_ep_b = 1
         best_val_lift_b = -1e9
         best_val_auc_b = -1e9
         patience_counter_b = 0
 
-        for ep in range(1, epochs_b + 1):
+        # Resume Stage B if requested and available
+        if args.resume and stage_b_ckpt.exists() and not args.smoke_test:
+            ckpt_b = torch.load(stage_b_ckpt, map_location=device)
+            model.load_state_dict(ckpt_b["model_state"])
+            if "optimizer_state" in ckpt_b:
+                try:
+                    opt_b.load_state_dict(ckpt_b["optimizer_state"])
+                except Exception as e:
+                    logger.warning(f"Could not restore Stage B optimizer state: {e}")
+            start_ep_b = ckpt_b.get("epoch", 0) + 1
+            best_val_lift_b = ckpt_b.get("val_summary", {}).get("macro_auprc_lift", -1e9)
+            best_val_auc_b = ckpt_b.get("val_summary", {}).get("macro_auroc", -1e9)
+            logger.info(
+                f"Resuming Stage B from Epoch {start_ep_b}/{epochs_b} "
+                f"(prior best lift: {best_val_lift_b:.4f}, AUROC: {best_val_auc_b:.4f})."
+            )
+            for _ in range(1, start_ep_b):
+                sched_b.step()
+
+        for ep in range(start_ep_b, epochs_b + 1):
             t_ep = time.time()
             loss_train = train_one_epoch(
                 model=model,
