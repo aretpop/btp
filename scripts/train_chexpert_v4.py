@@ -337,72 +337,72 @@ def main():
 
         if not skip_stage_a:
             for ep in range(1, epochs_a + 1):
-            t_ep = time.time()
-            loss_train = train_one_epoch(
-                model=model,
-                loader=train_loader,
-                optimizer=opt_a,
-                criterion=criterion,
-                scaler=scaler,
-                device=device,
-                cfg=cfg,
-                epoch=ep,
-                stage="A",
-                max_steps=2 if args.smoke_test else None,
-            )
-            sched_a.step()
-
-            # Val evaluation
-            v_logits, v_targets, v_masks, v_pids = collect_predictions(
-                model=model, loader=val_loader, device=device, cfg=cfg,
-                max_steps=2 if args.smoke_test else None,
-            )
-            _, val_summary, _ = evaluate_predictions(
-                logits=v_logits,
-                targets=v_targets,
-                masks=v_masks,
-                patient_ids=v_pids,
-                n_bootstraps=bootstrap_val,
-                min_positives_lift=cfg.get("evaluation", {}).get("min_positives_lift", 20),
-            )
-
-            ep_time = time.time() - t_ep
-            cur_lift = val_summary["macro_auprc_lift"]
-            cur_auc = val_summary["macro_auroc"]
-            cur_pr = val_summary["macro_auprc"]
-
-            logger.info(
-                f"Stage A | Ep {ep:02d}/{epochs_a:02d} ({ep_time:.1f}s) -> "
-                f"Train Loss: {loss_train:.4f} | Val AUROC: {cur_auc:.4f} | "
-                f"Val AUPRC: {cur_pr:.4f} | Val Lift: {cur_lift:.4f}"
-            )
-
-            # Model selection by AUPRC lift with AUROC tie-break
-            is_better = (cur_lift > best_val_lift_a + 1e-4) or (
-                abs(cur_lift - best_val_lift_a) <= 1e-4 and cur_auc > best_val_auc_a
-            )
-            if is_better:
-                best_val_lift_a = cur_lift
-                best_val_auc_a = cur_auc
-                patience_counter_a = 0
-                torch.save(
-                    {
-                        "epoch": ep,
-                        "stage": "A",
-                        "model_state": model.state_dict(),
-                        "optimizer_state": opt_a.state_dict(),
-                        "val_summary": val_summary,
-                        "config": cfg,
-                    },
-                    stage_a_ckpt,
+                t_ep = time.time()
+                loss_train = train_one_epoch(
+                    model=model,
+                    loader=train_loader,
+                    optimizer=opt_a,
+                    criterion=criterion,
+                    scaler=scaler,
+                    device=device,
+                    cfg=cfg,
+                    epoch=ep,
+                    stage="A",
+                    max_steps=2 if args.smoke_test else None,
                 )
-                logger.info(f"  --> Saved new best Stage A checkpoint: {stage_a_ckpt.name} (Lift: {cur_lift:.4f})")
-            else:
-                patience_counter_a += 1
-                logger.info(f"  No improvement for {patience_counter_a}/{patience_a} epochs.")
-                if patience_counter_a >= patience_a and not args.smoke_test:
-                    logger.info(f"Early stopping triggered in Stage A at epoch {ep}.")
-                    break
+                sched_a.step()
+
+                # Val evaluation
+                v_logits, v_targets, v_masks, v_pids = collect_predictions(
+                    model=model, loader=val_loader, device=device, cfg=cfg,
+                    max_steps=2 if args.smoke_test else None,
+                )
+                _, val_summary, _ = evaluate_predictions(
+                    logits=v_logits,
+                    targets=v_targets,
+                    masks=v_masks,
+                    patient_ids=v_pids,
+                    n_bootstraps=bootstrap_val,
+                    min_positives_lift=cfg.get("evaluation", {}).get("min_positives_lift", 20),
+                )
+
+                ep_time = time.time() - t_ep
+                cur_lift = val_summary["macro_auprc_lift"]
+                cur_auc = val_summary["macro_auroc"]
+                cur_pr = val_summary["macro_auprc"]
+
+                logger.info(
+                    f"Stage A | Ep {ep:02d}/{epochs_a:02d} ({ep_time:.1f}s) -> "
+                    f"Train Loss: {loss_train:.4f} | Val AUROC: {cur_auc:.4f} | "
+                    f"Val AUPRC: {cur_pr:.4f} | Val Lift: {cur_lift:.4f}"
+                )
+
+                # Model selection by AUPRC lift with AUROC tie-break
+                is_better = (cur_lift > best_val_lift_a + 1e-4) or (
+                    abs(cur_lift - best_val_lift_a) <= 1e-4 and cur_auc > best_val_auc_a
+                )
+                if is_better:
+                    best_val_lift_a = cur_lift
+                    best_val_auc_a = cur_auc
+                    patience_counter_a = 0
+                    torch.save(
+                        {
+                            "epoch": ep,
+                            "stage": "A",
+                            "model_state": model.state_dict(),
+                            "optimizer_state": opt_a.state_dict(),
+                            "val_summary": val_summary,
+                            "config": cfg,
+                        },
+                        stage_a_ckpt,
+                    )
+                    logger.info(f"  --> Saved new best Stage A checkpoint: {stage_a_ckpt.name} (Lift: {cur_lift:.4f})")
+                else:
+                    patience_counter_a += 1
+                    logger.info(f"  No improvement for {patience_counter_a}/{patience_a} epochs.")
+                    if patience_counter_a >= patience_a and not args.smoke_test:
+                        logger.info(f"Early stopping triggered in Stage A at epoch {ep}.")
+                        break
 
         # ======================================================================
         # STAGE B: Selective Fine-Tuning
